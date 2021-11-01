@@ -5,6 +5,7 @@ import path from "path";
 import sharp from "sharp";
 import { v4 as uuid } from "uuid";
 import dayjs from "dayjs";
+import jwt from "jsonwebtoken";
 
 import { PassThrough, Transform, TransformCallback } from "stream";
 
@@ -22,7 +23,7 @@ import {
   ratingAsInt,
 } from "./smapi";
 import { LinkCodes, InMemoryLinkCodes } from "./link_codes";
-import { MusicService, isSuccess } from "./music_service";
+import { MusicService, Credentials as MusicServiceCredentials } from "./music_service";
 import bindSmapiSoapServiceToExpress from "./smapi";
 import { AccessTokens, AccessTokenPerAuthToken } from "./access_tokens";
 import logger from "./logger";
@@ -135,6 +136,15 @@ function server(
     return i8n(...asLANGs(req.headers["accept-language"]));
   };
 
+  const credentialsFrom = (req: Request) => pipe(
+    req.query[BONOB_ACCESS_TOKEN_HEADER] as string,
+    O.fromNullable,
+    O.map((accessToken) => accessTokens.authTokenFor(accessToken)),
+    O.map((authToken) => jwt.verify(authToken!, "foo") as unknown as MusicServiceCredentials),
+    O.map(it => ({username: it.username, password: it.password })),
+    O.getOrElseW(() => undefined)
+  );
+
   app.get("/", (req, res) => {
     const lang = langFor(req);
     Promise.all([sonos.devices(), sonos.services()]).then(
@@ -221,23 +231,27 @@ function server(
         message: lang("invalidLinkCode"),
       });
     } else {
-      const authResult = await musicService.generateToken({
+      const credentials = {
         username,
         password,
-      });
-      if (isSuccess(authResult)) {
-        linkCodes.associate(linkCode, authResult);
+      }
+      musicService.login(credentials).then(_ => {
+        linkCodes.associate(linkCode, {
+          userId: username,
+          nickname: username,
+          authToken: jwt.sign(credentials, "foo")
+        })
         res.render("success", {
           lang,
           message: lang("loginSuccessful"),
-        });
-      } else {
+        })
+      }).catch(e => {
         res.status(403).render("failure", {
           lang,
           message: lang("loginFailed"),
-          cause: authResult.message,
-        });
-      }
+          cause: e.message,
+        })
+      });
     }
   });
 
@@ -264,8 +278,8 @@ function server(
       const nextLove = { ...rating, love: !rating.love };
       const nextStar = { ...rating, stars: (rating.stars === 5 ? 0 : rating.stars + 1) }
 
-      const loveRatingIcon = bonobUrl.append({pathname: rating.love ? '/love-selected.svg' : '/love-unselected.svg'}).href();
-      const starsRatingIcon = bonobUrl.append({pathname: `/star${rating.stars}.svg`}).href();
+      const loveRatingIcon = bonobUrl.append({ pathname: rating.love ? '/love-selected.svg' : '/love-unselected.svg' }).href();
+      const starsRatingIcon = bonobUrl.append({ pathname: `/star${rating.stars}.svg` }).href();
 
       return `<Match propname="rating" value="${value}">
         <Ratings>
@@ -278,7 +292,7 @@ function server(
         </Ratings>
       </Match>`
     }
-    
+
     res.type("application/xml").send(`<?xml version="1.0" encoding="utf-8" ?>
     <Presentation>
       <BrowseOptions PageSize="30" />
@@ -286,9 +300,9 @@ function server(
         <Match>
           <imageSizeMap>
             ${SONOS_RECOMMENDED_IMAGE_SIZES.map(
-              (size) =>
-                `<sizeEntry size="${size}" substitution="/size/${size}"/>`
-            ).join("")}
+      (size) =>
+        `<sizeEntry size="${size}" substitution="/size/${size}"/>`
+    ).join("")}
           </imageSizeMap>
         </Match>
       </PresentationMap>
@@ -297,9 +311,9 @@ function server(
           <browseIconSizeMap>
               <sizeEntry size="0" substitution="/size/legacy"/>
               ${SONOS_RECOMMENDED_IMAGE_SIZES.map(
-                (size) =>
-                  `<sizeEntry size="${size}" substitution="/size/${size}"/>`
-              ).join("")}
+      (size) =>
+        `<sizeEntry size="${size}" substitution="/size/${size}"/>`
+    ).join("")}
             </browseIconSizeMap>
         </Match>
       </PresentationMap>
@@ -334,21 +348,16 @@ function server(
     const trace = uuid();
 
     logger.info(
-      `${trace} bnb<- ${req.method} ${req.path}?${
-        JSON.stringify(req.query)
+      `${trace} bnb<- ${req.method} ${req.path}?${JSON.stringify(req.query)
       }, headers=${JSON.stringify(req.headers)}`
     );
-    const authToken = pipe(
-      req.query[BONOB_ACCESS_TOKEN_HEADER] as string,
-      O.fromNullable,
-      O.map((accessToken) => accessTokens.authTokenFor(accessToken)),
-      O.getOrElseW(() => undefined)
-    );
-    if (!authToken) {
+    const credentials = credentialsFrom(req);
+
+    if (!credentials) {
       return res.status(401).send();
     } else {
       return musicService
-        .login(authToken)
+        .login(credentials)
         .then((it) =>
           it
             .stream({
@@ -359,8 +368,7 @@ function server(
         )
         .then(({ musicLibrary, stream }) => {
           logger.info(
-            `${trace} bnb<- stream response from music service for ${id}, status=${
-              stream.status
+            `${trace} bnb<- stream response from music service for ${id}, status=${stream.status
             }, headers=(${JSON.stringify(stream.headers)})`
           );
 
@@ -385,8 +393,7 @@ function server(
             nowPlaying: boolean;
           }) => {
             logger.info(
-              `${trace} bnb-> ${
-                req.path
+              `${trace} bnb-> ${req.path
               }, status=${status}, headers=${JSON.stringify(headers)}`
             );
             (nowPlaying
@@ -462,15 +469,15 @@ function server(
       const spec =
         size == "legacy"
           ? {
-              mimeType: "image/png",
-              responseFormatter: (svg: string): Promise<Buffer | string> =>
-                sharp(Buffer.from(svg)).resize(80).png().toBuffer(),
-            }
+            mimeType: "image/png",
+            responseFormatter: (svg: string): Promise<Buffer | string> =>
+              sharp(Buffer.from(svg)).resize(80).png().toBuffer(),
+          }
           : {
-              mimeType: "image/svg+xml",
-              responseFormatter: (svg: string): Promise<Buffer | string> =>
-                Promise.resolve(svg),
-            };
+            mimeType: "image/svg+xml",
+            responseFormatter: (svg: string): Promise<Buffer | string> =>
+              Promise.resolve(svg),
+          };
 
       return Promise.resolve(
         icon
@@ -518,20 +525,19 @@ function server(
   ];
 
   app.get("/art/:ids/size/:size", (req, res) => {
-    const authToken = accessTokens.authTokenFor(
-      req.query[BONOB_ACCESS_TOKEN_HEADER] as string
-    );
+    const credentials = credentialsFrom(req);
+
     const ids = req.params["ids"]!.split("&");
     const size = Number.parseInt(req.params["size"]!);
 
-    if (!authToken) {
+    if (!credentials) {
       return res.status(401).send();
     } else if (!(size > 0)) {
       return res.status(400).send();
     }
 
     return musicService
-      .login(authToken)
+      .login(credentials)
       .then((it) => Promise.all(ids.map((id) => it.coverArt(id, size))))
       .then((coverArts) => coverArts.filter((it) => it))
       .then(shuffle)

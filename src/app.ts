@@ -14,7 +14,7 @@ import { InMemoryAccessTokens, sha256 } from "./access_tokens";
 import { InMemoryLinkCodes } from "./link_codes";
 import readConfig from "./config";
 import sonos, { bonobService } from "./sonos";
-import { MusicService } from "./music_service";
+import { Credentials, MusicService } from "./music_service";
 import { SystemClock } from "./clock";
 
 const config = readConfig();
@@ -46,9 +46,8 @@ const subsonic = new Subsonic(
 );
 
 const featureFlagAwareMusicService: MusicService = {
-  generateToken: subsonic.generateToken,
-  login: (authToken: string) =>
-    subsonic.login(authToken).then((library) => {
+  login: (credentials: Credentials) =>
+    subsonic.login(credentials).then((library) => {
       return {
         ...library,
         scrobble: (id: string) => {

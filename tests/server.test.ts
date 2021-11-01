@@ -4,6 +4,7 @@ import request from "supertest";
 import Image from "image-js";
 import fs from "fs";
 import path from "path";
+import jwt from "jsonwebtoken";
 
 import { MusicService } from "../src/music_service";
 import makeServer, {
@@ -723,7 +724,11 @@ describe("server", () => {
           }
         );
 
-        const authToken = uuid();
+        const credentials = {
+          username: uuid(),
+          password: uuid()
+        }
+        const authToken = jwt.sign(credentials, "foo");
         const trackId = uuid();
         let accessToken: string;
 
@@ -911,7 +916,7 @@ describe("server", () => {
                 );
                 expect(Object.keys(res.headers)).not.toContain("content-range");
 
-                expect(musicService.login).toHaveBeenCalledWith(authToken);
+                expect(musicService.login).toHaveBeenCalledWith(credentials);
                 expect(musicLibrary.nowPlaying).toHaveBeenCalledWith(trackId);
                 expect(musicLibrary.stream).toHaveBeenCalledWith({ trackId });
               });
@@ -950,7 +955,7 @@ describe("server", () => {
                 );
                 expect(Object.keys(res.headers)).not.toContain("content-range");
 
-                expect(musicService.login).toHaveBeenCalledWith(authToken);
+                expect(musicService.login).toHaveBeenCalledWith(credentials);
                 expect(musicLibrary.nowPlaying).toHaveBeenCalledWith(trackId);
                 expect(musicLibrary.stream).toHaveBeenCalledWith({ trackId });
               });
@@ -988,7 +993,7 @@ describe("server", () => {
                 );
                 expect(res.header["content-range"]).toBeUndefined();
 
-                expect(musicService.login).toHaveBeenCalledWith(authToken);
+                expect(musicService.login).toHaveBeenCalledWith(credentials);
                 expect(musicLibrary.nowPlaying).toHaveBeenCalledWith(trackId);
                 expect(musicLibrary.stream).toHaveBeenCalledWith({ trackId });
               });
@@ -1029,7 +1034,7 @@ describe("server", () => {
                   stream.headers["content-range"]
                 );
 
-                expect(musicService.login).toHaveBeenCalledWith(authToken);
+                expect(musicService.login).toHaveBeenCalledWith(credentials);
                 expect(musicLibrary.nowPlaying).toHaveBeenCalledWith(trackId);
                 expect(musicLibrary.stream).toHaveBeenCalledWith({ trackId });
               });
@@ -1072,7 +1077,7 @@ describe("server", () => {
                 );
                 expect(res.header["content-range"]).toBeUndefined();
 
-                expect(musicService.login).toHaveBeenCalledWith(authToken);
+                expect(musicService.login).toHaveBeenCalledWith(credentials);
                 expect(musicLibrary.nowPlaying).toHaveBeenCalledWith(trackId);
                 expect(musicLibrary.stream).toHaveBeenCalledWith({
                   trackId,
@@ -1117,7 +1122,7 @@ describe("server", () => {
                   stream.headers["content-range"]
                 );
 
-                expect(musicService.login).toHaveBeenCalledWith(authToken);
+                expect(musicService.login).toHaveBeenCalledWith(credentials);
                 expect(musicLibrary.nowPlaying).toHaveBeenCalledWith(trackId);
                 expect(musicLibrary.stream).toHaveBeenCalledWith({
                   trackId,
@@ -1150,7 +1155,11 @@ describe("server", () => {
           }
         );
 
-        const authToken = uuid();
+        const credentials = {
+          username: uuid(),
+          password: uuid()
+        }
+        const authToken = jwt.sign(credentials, "foo");
         const albumId = uuid();
         let accessToken: string;
 
@@ -1224,7 +1233,7 @@ describe("server", () => {
                     coverArt.contentType
                   );
 
-                  expect(musicService.login).toHaveBeenCalledWith(authToken);
+                  expect(musicService.login).toHaveBeenCalledWith(credentials);
                   expect(musicLibrary.coverArt).toHaveBeenCalledWith(
                     `artist:${albumId}`,
                     180
@@ -1290,7 +1299,7 @@ describe("server", () => {
                   expect(res.status).toEqual(200);
                   expect(res.header["content-type"]).toEqual("image/png");
 
-                  expect(musicService.login).toHaveBeenCalledWith(authToken);
+                  expect(musicService.login).toHaveBeenCalledWith(credentials);
                   ids.forEach((id) => {
                     expect(musicLibrary.coverArt).toHaveBeenCalledWith(id, 200);
                   });
@@ -1389,7 +1398,7 @@ describe("server", () => {
                   expect(res.status).toEqual(200);
                   expect(res.header["content-type"]).toEqual("image/png");
 
-                  expect(musicService.login).toHaveBeenCalledWith(authToken);
+                  expect(musicService.login).toHaveBeenCalledWith(credentials);
                   ids.forEach((id) => {
                     expect(musicLibrary.coverArt).toHaveBeenCalledWith(id, 180);
                   });
@@ -1445,7 +1454,7 @@ describe("server", () => {
                   expect(res.status).toEqual(200);
                   expect(res.header["content-type"]).toEqual("image/png");
 
-                  expect(musicService.login).toHaveBeenCalledWith(authToken);
+                  expect(musicService.login).toHaveBeenCalledWith(credentials);
                   ids.forEach((id) => {
                     expect(musicLibrary.coverArt).toHaveBeenCalledWith(id, 180);
                   });
@@ -1493,7 +1502,7 @@ describe("server", () => {
                   expect(res.status).toEqual(200);
                   expect(res.header["content-type"]).toEqual("image/png");
 
-                  expect(musicService.login).toHaveBeenCalledWith(authToken);
+                  expect(musicService.login).toHaveBeenCalledWith(credentials);
                   ids.forEach((id) => {
                     expect(musicLibrary.coverArt).toHaveBeenCalledWith(id, 180);
                   });
@@ -1576,7 +1585,7 @@ describe("server", () => {
                   coverArt.contentType
                 );
 
-                expect(musicService.login).toHaveBeenCalledWith(authToken);
+                expect(musicService.login).toHaveBeenCalledWith(credentials);
                 expect(musicLibrary.coverArt).toHaveBeenCalledWith(
                   `coverArt:${albumId}`,
                   180

@@ -164,8 +164,8 @@ export const asArtistAlbumPairs = (artists: Artist[]): [Artist, Album][] =>
   );
 
 export interface MusicService {
-  generateToken(credentials: Credentials): Promise<AuthSuccess | AuthFailure>;
-  login(authToken: string): Promise<MusicLibrary>;
+  // generateToken(credentials: Credentials): Promise<AuthSuccess | AuthFailure>;
+  login(credentials: Credentials): Promise<MusicLibrary>;
 }
 
 export interface MusicLibrary {

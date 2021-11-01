@@ -5,13 +5,9 @@ import { pipe } from "fp-ts/lib/function";
 import { ordString, fromCompare } from "fp-ts/lib/Ord";
 import { shuffle } from "underscore";
 
-import { b64Encode, b64Decode } from "../src/b64";
-
 import {
   MusicService,
   Credentials,
-  AuthSuccess,
-  AuthFailure,
   Artist,
   MusicLibrary,
   ArtistQuery,
@@ -30,27 +26,7 @@ export class InMemoryMusicService implements MusicService {
   artists: Artist[] = [];
   tracks: Track[] = [];
 
-  generateToken({
-    username,
-    password,
-  }: Credentials): Promise<AuthSuccess | AuthFailure> {
-    if (
-      username != undefined &&
-      password != undefined &&
-      this.users[username] == password
-    ) {
-      return Promise.resolve({
-        authToken: b64Encode(JSON.stringify({ username, password })),
-        userId: username,
-        nickname: username,
-      });
-    } else {
-      return Promise.resolve({ message: `Invalid user:${username}` });
-    }
-  }
-
-  login(token: string): Promise<MusicLibrary> {
-    const credentials = JSON.parse(b64Decode(token)) as Credentials;
+  login(credentials: Credentials): Promise<MusicLibrary> {
     if (this.users[credentials.username] != credentials.password)
       return Promise.reject("Invalid auth token");
 

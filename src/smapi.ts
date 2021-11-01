@@ -4,6 +4,7 @@ import { listen } from "soap";
 import { readFileSync } from "fs";
 import path from "path";
 import logger from "./logger";
+import jwt from "jsonwebtoken";
 
 import { LinkCodes } from "./link_codes";
 import {
@@ -17,6 +18,7 @@ import {
   Rating,
   slice2,
   Track,
+  Credentials as MusicServiceCredentials
 } from "./music_service";
 import { AccessTokens } from "./access_tokens";
 import { Clock } from "./clock";
@@ -335,10 +337,11 @@ const auth = async (
     };
   }
   const authToken = credentials.loginToken.token;
+  const up = jwt.verify(authToken, "foo") as MusicServiceCredentials;
   const accessToken = accessTokens.mint(authToken);
 
   return musicService
-    .login(authToken)
+    .login(up)
     .then((musicLibrary) => ({
       musicLibrary,
       authToken,

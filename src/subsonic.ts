@@ -27,6 +27,7 @@ import _ from "underscore";
 import fse from "fs-extra";
 import path from "path";
 
+
 import axios, { AxiosRequestConfig } from "axios";
 import { Encryption } from "./encryption";
 import randomString from "./random_string";
@@ -424,19 +425,29 @@ export class Subsonic implements MusicService {
         else return json as unknown as T;
       });
 
-  generateToken = async (credentials: Credentials) =>
-    this.getJSON(credentials, "/rest/ping.view")
-      .then(() => ({
-        authToken: b64Encode(
-          JSON.stringify(this.encryption.encrypt(JSON.stringify(credentials)))
-        ),
-        userId: credentials.username,
-        nickname: credentials.username,
-      }))
-      .catch((e) => ({ message: `${e}` }));
+  // generateToken = async (credentials: Credentials) =>
+  //   this.getJSON(credentials, "/rest/ping.view")
+  //     .then(() => jwt.sign(credentials, "foo"))
+  //     .then((authToken) => {
+  //       return ({
+  //         authToken,
+  //         userId: credentials.username,
+  //         nickname: credentials.username,
+  //       });
+  //     })
+  //     .catch((e) => ({ message: `${e}` }));
 
-  parseToken = (token: string): Credentials =>
-    JSON.parse(this.encryption.decrypt(JSON.parse(b64Decode(token))));
+  // parseToken = (token: string): Credentials => {
+  //   try {
+  //     const x  = jwt.verify(token, "foo") as any;
+  //     return {
+  //       username: x.username,
+  //       password: x.password
+  //     }
+  //   } catch {
+  //     throw Error("Boom")
+  //   }
+  // };
 
   getArtists = (
     credentials: Credentials
@@ -578,9 +589,8 @@ export class Subsonic implements MusicService {
   //       albums: it.album.map(asAlbum),
   //     }));
 
-  async login(token: string) {
+  async login(credentials: Credentials) {
     const subsonic = this;
-    const credentials: Credentials = this.parseToken(token);
 
     const musicLibrary: MusicLibrary = {
       artists: (q: ArtistQuery): Promise<Result<ArtistSummary>> =>
@@ -887,6 +897,6 @@ export class Subsonic implements MusicService {
         ),
     };
 
-    return Promise.resolve(musicLibrary);
+    return this.getJSON(credentials, "/rest/ping.view").then(() => musicLibrary);
   }
 }
