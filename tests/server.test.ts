@@ -570,9 +570,9 @@ describe("server", () => {
         });
 
         const musicService = {
-          generateToken: jest.fn(),
           login: jest.fn(),
         };
+        const musicLibrary = {};
         const linkCodes = {
           mint: jest.fn(),
           has: jest.fn(),
@@ -625,55 +625,55 @@ describe("server", () => {
 
         describe("when the credentials are valid", () => {
           it("should return 200 ok and have associated linkCode with user", async () => {
-            const username = "jane";
-            const password = "password100";
+            const credentials = {
+              username: "jane",
+              password:"password100"
+            }
             const linkCode = `linkCode-${uuid()}`;
-            const authToken = {
-              authToken: `authtoken-${uuid()}`,
-              userId: `${username}-uid`,
-              nickname: `${username}-nickname`,
-            };
 
             linkCodes.has.mockReturnValue(true);
-            musicService.generateToken.mockResolvedValue(authToken);
             linkCodes.associate.mockReturnValue(true);
+            musicService.login.mockResolvedValue(musicLibrary)
 
             const res = await request(server)
               .post(bonobUrl.append({ pathname: "/login" }).pathname())
               .set("accept-language", acceptLanguage)
               .type("form")
-              .send({ username, password, linkCode })
+              .send({ ...credentials, linkCode })
               .expect(200);
 
             expect(res.text).toContain(lang("loginSuccessful"));
 
-            expect(musicService.generateToken).toHaveBeenCalledWith({
-              username,
-              password,
-            });
+            expect(musicService.login).toHaveBeenCalledWith(credentials);
             expect(linkCodes.has).toHaveBeenCalledWith(linkCode);
             expect(linkCodes.associate).toHaveBeenCalledWith(
               linkCode,
-              authToken
+              {
+                userId: credentials.username,
+                nickname: credentials.username,
+                authToken: jwt.sign(credentials, "foo")
+              }
             );
           });
         });
 
         describe("when credentials are invalid", () => {
           it("should return 403 with message", async () => {
-            const username = "userDoesntExist";
-            const password = "password";
+            const credentials = {
+              username: "userDoesntExist",
+              password: "password"
+            }
             const linkCode = uuid();
-            const message = `Invalid user:${username}`;
+            const message = `Invalid user:${credentials.username}`;
 
             linkCodes.has.mockReturnValue(true);
-            musicService.generateToken.mockResolvedValue({ message });
+            musicService.login.mockRejectedValue({ message });
 
             const res = await request(server)
               .post(bonobUrl.append({ pathname: "/login" }).pathname())
               .set("accept-language", acceptLanguage)
               .type("form")
-              .send({ username, password, linkCode })
+              .send({ ...credentials, linkCode })
               .expect(403);
 
             expect(res.text).toContain(lang("loginFailed"));

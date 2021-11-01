@@ -2,6 +2,7 @@ import crypto from "crypto";
 import request from "supertest";
 import { Client, createClientAsync } from "soap";
 import { v4 as uuid } from "uuid";
+import jwt from "jsonwebtoken";
 
 import { DOMParserImpl } from "xmldom-ts";
 import * as xpath from "xpath-ts";
@@ -595,7 +596,8 @@ describe("api", () => {
 
   [bonobUrlWithoutContextPath, bonobUrlWithContextPath].forEach((bonobUrl) => {
     describe(`bonob with url ${bonobUrl}`, () => {
-      const authToken = `authToken-${uuid()}`;
+      const credentials = { username: uuid(), password: uuid() };
+      const authToken = jwt.sign(credentials, "foo")
       const accessToken = `accessToken-${uuid()}`;
 
       const bonobUrlWithAccessToken = bonobUrl.append({
@@ -2694,7 +2696,7 @@ describe("api", () => {
                     .href(),
                 });
 
-                expect(musicService.login).toHaveBeenCalledWith(authToken);
+                expect(musicService.login).toHaveBeenCalledWith(credentials);
                 expect(accessTokens.mint).toHaveBeenCalledWith(authToken);
               });
             });
@@ -2776,7 +2778,7 @@ describe("api", () => {
                     someTrack
                   ),
                 });
-                expect(musicService.login).toHaveBeenCalledWith(authToken);
+                expect(musicService.login).toHaveBeenCalledWith(credentials);
                 expect(accessTokens.mint).toHaveBeenCalledWith(authToken);
                 expect(musicLibrary.track).toHaveBeenCalledWith(someTrack.id);
               });
@@ -2818,7 +2820,7 @@ describe("api", () => {
                   updateId: null,
                 },
               });
-              expect(musicService.login).toHaveBeenCalledWith(authToken);
+              expect(musicService.login).toHaveBeenCalledWith(credentials);
               expect(accessTokens.mint).toHaveBeenCalledWith(authToken);
               expect(musicLibrary.createPlaylist).toHaveBeenCalledWith(title);
             });
@@ -2847,7 +2849,7 @@ describe("api", () => {
                   updateId: null,
                 },
               });
-              expect(musicService.login).toHaveBeenCalledWith(authToken);
+              expect(musicService.login).toHaveBeenCalledWith(credentials);
               expect(accessTokens.mint).toHaveBeenCalledWith(authToken);
               expect(musicLibrary.createPlaylist).toHaveBeenCalledWith(title);
               expect(musicLibrary.addToPlaylist).toHaveBeenCalledWith(
@@ -2882,7 +2884,7 @@ describe("api", () => {
             });
 
             expect(result[0]).toEqual({ deleteContainerResult: null });
-            expect(musicService.login).toHaveBeenCalledWith(authToken);
+            expect(musicService.login).toHaveBeenCalledWith(credentials);
             expect(accessTokens.mint).toHaveBeenCalledWith(authToken);
             expect(musicLibrary.deletePlaylist).toHaveBeenCalledWith(id);
           });
@@ -2916,7 +2918,7 @@ describe("api", () => {
             expect(result[0]).toEqual({
               addToContainerResult: { updateId: null },
             });
-            expect(musicService.login).toHaveBeenCalledWith(authToken);
+            expect(musicService.login).toHaveBeenCalledWith(credentials);
             expect(accessTokens.mint).toHaveBeenCalledWith(authToken);
             expect(musicLibrary.addToPlaylist).toHaveBeenCalledWith(
               playlistId,
@@ -2953,7 +2955,7 @@ describe("api", () => {
               expect(result[0]).toEqual({
                 removeFromContainerResult: { updateId: null },
               });
-              expect(musicService.login).toHaveBeenCalledWith(authToken);
+              expect(musicService.login).toHaveBeenCalledWith(credentials);
               expect(accessTokens.mint).toHaveBeenCalledWith(authToken);
               expect(musicLibrary.removeFromPlaylist).toHaveBeenCalledWith(
                 playlistId,
@@ -2987,7 +2989,7 @@ describe("api", () => {
               expect(result[0]).toEqual({
                 removeFromContainerResult: { updateId: null },
               });
-              expect(musicService.login).toHaveBeenCalledWith(authToken);
+              expect(musicService.login).toHaveBeenCalledWith(credentials);
               expect(accessTokens.mint).toHaveBeenCalledWith(authToken);
               expect(musicLibrary.deletePlaylist).toHaveBeenCalledTimes(3);
               expect(musicLibrary.deletePlaylist).toHaveBeenNthCalledWith(
@@ -3035,7 +3037,7 @@ describe("api", () => {
               expect(result[0]).toEqual({
                 rateItemResult: { shouldSkip: false },
               });
-              expect(musicService.login).toHaveBeenCalledWith(authToken);
+              expect(musicService.login).toHaveBeenCalledWith(credentials);
               expect(accessTokens.mint).toHaveBeenCalledWith(authToken);
               expect(musicLibrary.rate).toHaveBeenCalledWith(trackId, ratingFromInt(ratingIntValue));
             });
@@ -3056,7 +3058,7 @@ describe("api", () => {
               expect(result[0]).toEqual({
                 rateItemResult: { shouldSkip: false },
               });
-              expect(musicService.login).toHaveBeenCalledWith(authToken);
+              expect(musicService.login).toHaveBeenCalledWith(credentials);
               expect(accessTokens.mint).toHaveBeenCalledWith(authToken);
               expect(musicLibrary.rate).toHaveBeenCalledWith(trackId, ratingFromInt(Math.abs(ratingIntValue)));
             });
@@ -3097,7 +3099,7 @@ describe("api", () => {
                 });
 
                 expect(result[0]).toEqual({ setPlayedSecondsResult: null });
-                expect(musicService.login).toHaveBeenCalledWith(authToken);
+                expect(musicService.login).toHaveBeenCalledWith(credentials);
                 expect(accessTokens.mint).toHaveBeenCalledWith(authToken);
                 expect(musicLibrary.track).toHaveBeenCalledWith(trackId);
                 expect(musicLibrary.scrobble).toHaveBeenCalledWith(trackId);
@@ -3118,7 +3120,7 @@ describe("api", () => {
                 });
 
                 expect(result[0]).toEqual({ setPlayedSecondsResult: null });
-                expect(musicService.login).toHaveBeenCalledWith(authToken);
+                expect(musicService.login).toHaveBeenCalledWith(credentials);
                 expect(accessTokens.mint).toHaveBeenCalledWith(authToken);
                 expect(musicLibrary.track).toHaveBeenCalledWith(trackId);
                 expect(musicLibrary.scrobble).not.toHaveBeenCalled();
@@ -3198,7 +3200,7 @@ describe("api", () => {
               });
 
               expect(result[0]).toEqual({ setPlayedSecondsResult: null });
-              expect(musicService.login).toHaveBeenCalledWith(authToken);
+              expect(musicService.login).toHaveBeenCalledWith(credentials);
               expect(accessTokens.mint).toHaveBeenCalledWith(authToken);
               expect(musicLibrary.scrobble).not.toHaveBeenCalled();
             });

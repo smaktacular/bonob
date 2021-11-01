@@ -337,24 +337,37 @@ const auth = async (
     };
   }
   const authToken = credentials.loginToken.token;
-  const up = jwt.verify(authToken, "foo") as MusicServiceCredentials;
-  const accessToken = accessTokens.mint(authToken);
-
-  return musicService
-    .login(up)
-    .then((musicLibrary) => ({
-      musicLibrary,
-      authToken,
-      accessToken,
-    }))
-    .catch((_) => {
-      throw {
-        Fault: {
-          faultcode: "Client.LoginUnauthorized",
-          faultstring: "Credentials not found...",
-        },
-      };
-    });
+  try {
+    const up = jwt.verify(authToken, "foo") as MusicServiceCredentials;
+    const accessToken = accessTokens.mint(authToken);
+  
+  
+    return musicService
+      .login({
+        username: up.username,
+        password: up.password
+      })
+      .then((musicLibrary) => ({
+        musicLibrary,
+        authToken,
+        accessToken,
+      }))
+      .catch((_) => {
+        throw {
+          Fault: {
+            faultcode: "Client.LoginUnauthorized",
+            faultstring: "Credentials not found...",
+          },
+        };
+      });
+  }catch(e) {
+    throw {
+      Fault: {
+        faultcode: "Client.LoginUnauthorized",
+        faultstring: "Credentials not found...",
+      },
+    };
+  }
 };
 
 function splitId<T>(id: string) {

@@ -1,6 +1,5 @@
 import { InMemoryMusicService } from "./in_memory_music_service";
 import {
-  AuthSuccess,
   MusicLibrary,
   artistToArtistSummary,
   albumToAlbumSummary,
@@ -21,32 +20,24 @@ import _ from "underscore";
 describe("InMemoryMusicService", () => {
   const service = new InMemoryMusicService();
 
-  describe("generateToken", () => {
-    it("should be able to generate a token and then use it to log in", async () => {
+  beforeEach(async () => {
+    service.clear();
+  });
+
+  describe("login", () => {
+    it("should return a MusicLibrary if valid credentials are used", async () => {
       const credentials = { username: "bob", password: "smith" };
 
       service.hasUser(credentials);
 
-      const token = (await service.generateToken(credentials)) as AuthSuccess;
-
-      expect(token.userId).toEqual(credentials.username);
-      expect(token.nickname).toEqual(credentials.username);
-
-      const musicLibrary = service.login(token.authToken);
-
+      const musicLibrary = await service.login(credentials);
       expect(musicLibrary).toBeDefined();
     });
 
-    it("should fail with an exception if an invalid token is used", async () => {
+    it("should fail with an exception if a credentials are used", async () => {
       const credentials = { username: "bob", password: "smith" };
 
-      service.hasUser(credentials);
-
-      const token = (await service.generateToken(credentials)) as AuthSuccess;
-
-      service.clear();
-
-      return expect(service.login(token.authToken)).rejects.toEqual(
+      return expect(service.login(credentials)).rejects.toEqual(
         "Invalid auth token"
       );
     });
@@ -75,12 +66,9 @@ describe("InMemoryMusicService", () => {
     let musicLibrary: MusicLibrary;
 
     beforeEach(async () => {
-      service.clear();
-
       service.hasUser(user);
 
-      const token = (await service.generateToken(user)) as AuthSuccess;
-      musicLibrary = (await service.login(token.authToken)) as MusicLibrary;
+      musicLibrary = (await service.login(user)) as MusicLibrary;
     });
 
     describe("artists", () => {

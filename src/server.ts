@@ -140,7 +140,9 @@ function server(
     req.query[BONOB_ACCESS_TOKEN_HEADER] as string,
     O.fromNullable,
     O.map((accessToken) => accessTokens.authTokenFor(accessToken)),
-    O.map((authToken) => jwt.verify(authToken!, "foo") as unknown as MusicServiceCredentials),
+    O.getOrElseW(() => undefined),
+    O.fromNullable,
+    O.map((authToken) => jwt.verify(authToken, "foo") as unknown as MusicServiceCredentials),
     O.map(it => ({username: it.username, password: it.password })),
     O.getOrElseW(() => undefined)
   );
